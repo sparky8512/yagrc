@@ -1,0 +1,15 @@
+// See comments in Add_One.proto about terrible naming
+
+syntax = "proto3";
+
+package Testing;
+
+// The request message containing a number to add
+message Addend {
+    int32 number = 1;
+}
+
+// The response message containing the sum total
+message Sum {
+    int32 number = 1;
+}

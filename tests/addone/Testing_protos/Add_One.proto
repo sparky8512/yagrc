@@ -1,0 +1,35 @@
+//
+// This is a protocol for a completely ridiculous service for adding one to
+// numbers in various ways. Its purpose is to test reflection infrastructure.
+//
+// Note that some of the naming, including package, directory, and file names,
+// is deliberately chosen to be tortuous toward good coding practice. This is
+// done to validate that neither the implementation nor the test suite for the
+// target infrastructure bits is reliant on sane naming practice.
+//
+// In other words: PLEASE DON'T USE THIS AS A TEMPLATE FOR YOUR .proto FILES
+//
+
+syntax = "proto3";
+
+package Testing;
+
+import "Testing_protos/AddTypes.proto";
+
+// A service for adding integer numbers
+service Addition {
+    // Add 1 to a number
+    rpc AddOne (Addend) returns (Sum);
+
+    // Add 1 to a number multiple times
+    rpc AddOnes (Addend) returns (stream Sum);
+
+    // Add 1 to a sum of numbers
+    rpc AddsOne (stream Addend) returns (Sum);
+
+    // Add 1 to multiple numbers
+    rpc AddsOnes (stream Addend) returns (stream Sum);
+
+    // Introspect the service
+    rpc Status (StatusQuery) returns (StatusResponse);
+}

@@ -1,0 +1,40 @@
+// See comments in Add_One.proto about terrible naming
+
+syntax = "proto3";
+
+package Testing;
+
+import public "Testing_protos/AddAltTypes.proto";
+
+message StatusQuery {
+    message Count {
+    }
+    message State {
+    }
+    oneof query {
+        Count count = 1001;
+        State state = 1002;
+    }
+}
+
+enum ServiceState {
+  _UNKNOWN = 0;
+  BUSY_COMPUTING_ONE = 1;
+  READY = 2;
+}
+
+message StatusResponse {
+    message Count {
+        uint32 number = 1;
+    }
+    message State {
+        message Wrapper {
+            ServiceState state = 1;
+        }
+        map<string, Wrapper> states = 1;
+    }
+    oneof response {
+        Count count = 2001;
+        State state = 2002;
+    }
+}

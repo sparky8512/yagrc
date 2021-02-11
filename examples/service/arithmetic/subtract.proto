@@ -1,0 +1,25 @@
+//
+// This is a protocol for a completely ridiculous service for subtracting one
+// from a number for example purposes. It is the complement service to
+// Testing.Addition, but with less horrid naming.
+//
+
+syntax = "proto3";
+
+package Arithmetic;
+
+// A service for subtracting integer numbers
+service Subtraction {
+    // Subtract 1 from a number
+    rpc SubtractOne (Minuend) returns (Difference);
+}
+
+// The request message containing a number from which to subtract
+message Minuend {
+    int32 number = 1;
+}
+
+// The response message containing difference between minuend and subtrahend
+message Difference {
+    int32 number = 1;
+}

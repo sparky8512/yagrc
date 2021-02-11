@@ -8,7 +8,7 @@ import pytest
 # Testing_protos package is deliberately kept out of the import path, but the
 # service still needs it. Can't just use relative imports, because the recursive
 # imports in the generated _pb2 modules also need to be able to find it.
-addone_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "addone")
+addone_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "service")
 sys.path.insert(0, addone_path)
 
 # See comments in Add_One.proto about terrible naming

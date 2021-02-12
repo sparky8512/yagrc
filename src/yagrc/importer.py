@@ -13,7 +13,7 @@ from yagrc import reflector
 
 
 def _proto_basename(name):
-    return name.removesuffix(".proto").replace("/", ".")
+    return (name[:-6] if name.endswith(".proto") else  name).replace("/", ".")
 
 
 class _DummyLoader(importlib.abc.Loader):  # pylint: disable=abstract-method

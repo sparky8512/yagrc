@@ -93,6 +93,7 @@ def import_protocols(channel):
     global subtract_pb2_grpc
     from arithmetic import subtract_pb2
     from arithmetic import subtract_pb2_grpc
+    global import_ok
     import_ok = True
 
 ...

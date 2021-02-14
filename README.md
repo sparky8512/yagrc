@@ -69,9 +69,28 @@ with grpc.insecure_channel(target) as channel:
 
 In both cases, the relevant protocol files must first be loaded, using `GrpcReflectionClient.load_protocols` or `GrpcImporter.configure`. The requested files will be loaded in addition to all dependencies of those files. In general, when using the reflector module, requesting to load the file that defines the service you're using will also load any message types used in that service. When using the importer module, it's best to request the proto files corresponding with the `_pb2` modules you import. Or you can just call `GrpcReflectionClient.load_protocols` or `GrpcImporter.configure` without specifying filenames or symbols and files defining all services advertised via reflection will be loaded. See the module documentation for specific detail.
 
+There is also a lazy importer in `yagrc.importer`, which is simpler to use but less flexible:
+```python
+import grpc
+from yagrc import importer
+
+importer.add_lazy_packages(["arithmetic"])
+
+from arithmetic import subtract_pb2
+from arithmetic import subtract_pb2_grpc
+
+...
+
+with grpc.insecure_channel(target) as channel:
+    importer.resolve_lazy_imports(channel)
+
+    stub = subtract_pb2_grpc.SubtractionStub(channel)
+    response = stub.SubtractOne(subtract_pb2.Minuend(number=5))
+```
+
 ### Practical use of the importer module
 
-The primary motivation for `yagrc.importer` is to provide a drop-in replacement of the protoc-generated modules without having to rewrite the client code to access the classes differently. However, a grpc `channel` is needed to in order to load the protocol files, and that's usually not something you'll want to be opening at the top level of a module, so the imports will probably need to be deferred to a function call. You can do this just prior to using the grpc calls, as in the example above, but doing so would result in a lot of unnecessary work every time each function that uses grpc is called.
+The primary motivation for `yagrc.importer` is to provide a drop-in replacement of the protoc-generated modules without having to rewrite the client code to access the classes differently. However, a grpc `channel` is needed to in order to load the protocol files, and that's usually not something you'll want to be opening at the top level of a module, so unless you use the lazy variant, the imports will probably need to be deferred to a function call. You can do this just prior to using the grpc calls, as in the example above, but doing so would result in a lot of unnecessary work every time each function that uses grpc is called.
 
 An alternative is to load them in one place along with the deferred imports and keep track of whether or not it needs to be run:
 ```python
@@ -109,9 +128,15 @@ With this pattern, if the protoc-generated files are available in the module imp
 
 Note that `GrpcImporter.configure` is not especially tread safe, so calling it in multiple threads simultaneously should be avoided. If there is a possibility that multiple threads may run grpc calls simultaneously, it would probably be better to just ensure `GrpcImporter.configure` is called in a main thread prior to starting the other threads.
 
+This is somewhat messy. The lazy import mechanism attempts to cut back on the mess by allowing the imports to happen in advance, outside of function context. The lazy importer example in the prior section will still prefer the protoc-generated files if they are available in the module import path. `importer.resolve_lazy_imports` is safe to call multiple times even if no more imports need to be resolved, it just won't do anything in that case.
+
+## Limitations
+
+For the `_pb2_grpc` modules, the `importer` module only provides the client stub class. It does not provide the client class that uses the `grpc.experimental` API, nor does it provide either of the two server classes. It would be possible to provide these, but the use case for the server classes would be limited to a service implemented on a server that wants to get the protocol modules via reflection from another server that implements the same service, which seems a bit of a stretch. And the experimental API is... well... experimental, which implies its API is subject to change.
+
 ## Security considerations
 
-All the functionality that communicates with the grpc service uses a grpc `channel` passed in by the caller. The security of that communication is only going to be as secure as the channel passed in. However, even if the channel is secure, using classes that are dynamically created based on reflection data is always going to be less secure than using classes that were generated in advance using protoc. Thus, use of the modules in this project is not advised for security sensitive applications.
+All the functionality that communicates with the grpc reflection service uses a grpc `Channel` passed in by the caller. The security of that communication is only going to be as secure as the channel passed in. However, even if the channel is secure, using classes that are dynamically created based on reflection data is always going to be less secure than using classes that were generated in advance using protoc. Thus, use of the modules in this project is not advised for security sensitive applications.
 
 ## Similar projects
 

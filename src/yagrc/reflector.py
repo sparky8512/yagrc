@@ -228,10 +228,10 @@ class GrpcReflectionClient():
 
         Args:
             channel (grpc.Channel): The RPC channel to use.
-            filenames (list[str]): Optional. List of proto file names, with
-                path, to request.
-            symbols (list[str]): Optional. List of fully qualified symbol
-                names for which to request proto files.
+            filenames (iterable[str]): Optional. Proto file names, with path,
+                to request.
+            symbols (iterable[str]): Optional. Fully qualified symbol names
+                for which to request proto files.
 
         Raises:
             ServiceError: Reflection service responded with an error.

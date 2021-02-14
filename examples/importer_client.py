@@ -3,15 +3,14 @@
 import logging
 
 import grpc
-from yagrc import importer
+from yagrc import importer as yagrc_importer
 
 
 def main():
-    grpc_importer = importer.GrpcImporter()
+    importer = yagrc_importer.GrpcImporter()
 
     with grpc.insecure_channel("localhost:19002") as channel:
-        grpc_importer.configure(channel,
-                                filenames=["arithmetic/subtract.proto"])
+        importer.configure(channel, filenames=["arithmetic/subtract.proto"])
 
         from arithmetic import subtract_pb2
         from arithmetic import subtract_pb2_grpc

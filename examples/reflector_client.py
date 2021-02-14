@@ -3,17 +3,16 @@
 import logging
 
 import grpc
-from yagrc import reflector
+from yagrc import reflector as yagrc_reflector
 
 
 def main():
-    grpc_reflector = reflector.GrpcReflectionClient()
+    reflector = yagrc_reflector.GrpcReflectionClient()
 
     with grpc.insecure_channel("localhost:19002") as channel:
-        grpc_reflector.load_protocols(channel,
-                                      symbols=["Arithmetic.Subtraction"])
-        stub_class = grpc_reflector.service_stub_class("Arithmetic.Subtraction")
-        request_class = grpc_reflector.message_class("Arithmetic.Minuend")
+        reflector.load_protocols(channel, symbols=["Arithmetic.Subtraction"])
+        stub_class = reflector.service_stub_class("Arithmetic.Subtraction")
+        request_class = reflector.message_class("Arithmetic.Minuend")
 
         stub = stub_class(channel)
         response = stub.SubtractOne(request_class(number=5))

@@ -9,7 +9,7 @@ import importlib.abc
 import importlib.machinery
 import sys
 
-from yagrc import reflector
+from yagrc import reflector as yagrc_reflector
 
 
 def _proto_basename(name):
@@ -32,11 +32,11 @@ class _DummyLoader(importlib.abc.Loader):  # pylint: disable=abstract-method
 
 class _DynamicPb2Loader(importlib.abc.Loader):  # pylint: disable=abstract-method
 
-    def __init__(self, imported_set, filename, yagrc_reflector):
+    def __init__(self, imported_set, filename, reflector):
         super().__init__()
         self._imported = imported_set
         self._filename = filename
-        self._reflector = yagrc_reflector
+        self._reflector = reflector
 
     def create_module(self, spec):
         return None
@@ -46,8 +46,8 @@ class _DynamicPb2Loader(importlib.abc.Loader):  # pylint: disable=abstract-metho
         _exec_pb2_module(module, self._reflector, self._filename)
 
 
-def _exec_pb2_module(module, yagrc_reflector, filename):
-    file_descr = yagrc_reflector.file_descriptor(filename)
+def _exec_pb2_module(module, reflector, filename):
+    file_descr = reflector.file_descriptor(filename)
     module.DESCRIPTOR = file_descr
     # mimic _pb2 module dependency import behavior
     for dep_descr in file_descr.dependencies:
@@ -58,9 +58,9 @@ def _exec_pb2_module(module, yagrc_reflector, filename):
                                    for key, val in dep_mod.__dict__.items()
                                    if not key.startswith("_"))
     for name, message in file_descr.message_types_by_name.items():
-        setattr(module, name, yagrc_reflector.message_from_descr(message))
+        setattr(module, name, reflector.message_from_descr(message))
     for name, enum in file_descr.enum_types_by_name.items():
-        setattr(module, name, reflector.enum_from_descr(enum))
+        setattr(module, name, yagrc_reflector.enum_from_descr(enum))
         for value in enum.values:
             # seems crazy to do this blindly, but the generated files do so
             setattr(module, value.name, value.number)
@@ -68,11 +68,11 @@ def _exec_pb2_module(module, yagrc_reflector, filename):
 
 class _DynamicPb2GrpcLoader(importlib.abc.Loader):  # pylint: disable=abstract-method
 
-    def __init__(self, imported_set, filename, yagrc_reflector):
+    def __init__(self, imported_set, filename, reflector):
         super().__init__()
         self._imported = imported_set
         self._filename = filename
-        self._reflector = yagrc_reflector
+        self._reflector = reflector
 
     def create_module(self, spec):
         return None
@@ -82,13 +82,13 @@ class _DynamicPb2GrpcLoader(importlib.abc.Loader):  # pylint: disable=abstract-m
         _exec_pb2_grpc_module(module, self._reflector, self._filename)
 
 
-def _exec_pb2_grpc_module(module, yagrc_reflector, filename):
-    file_descr = yagrc_reflector.file_descriptor(filename)
+def _exec_pb2_grpc_module(module, reflector, filename):
+    file_descr = reflector.file_descriptor(filename)
     dep_filenames = set()
-    method_proto_map = yagrc_reflector.methods_by_file[filename]
+    method_proto_map = reflector.methods_by_file[filename]
     for service_name, method_protos in method_proto_map.items():
         service = file_descr.services_by_name[service_name]
-        stub_class, dep_descrs = yagrc_reflector.gen_stub_class(
+        stub_class, dep_descrs = reflector.gen_stub_class(
             service, method_protos)
         stub_class.__module__ = module.__name__
         setattr(module, stub_class.__name__, stub_class)
@@ -100,13 +100,13 @@ def _exec_pb2_grpc_module(module, yagrc_reflector, filename):
 
 class _DynamicGrpcFinder(importlib.abc.MetaPathFinder):
 
-    def __init__(self, yagrc_reflector):
+    def __init__(self, reflector):
         super().__init__()
         self._package_modules = set()
         self._pb2_modules = {}
         self._pb2_grpc_modules = {}
         self._imported = set()
-        self._reflector = yagrc_reflector
+        self._reflector = reflector
 
     def configure_files(self, filenames):
         """Add modules and their containing package paths."""
@@ -162,7 +162,7 @@ class GrpcImporter():
     """
 
     def __init__(self):
-        self.reflector = reflector.GrpcReflectionEngine()
+        self.reflector = yagrc_reflector.GrpcReflectionEngine()
         self._finder = _DynamicGrpcFinder(self.reflector)
 
     def configure(self, channel, filenames=None, path_prepend=False):
@@ -194,7 +194,8 @@ class GrpcImporter():
                 them after other import paths.
 
         Raises:
-            reflector.ServiceError: Reflection service responded with an error.
+            yagrc.reflector.ServiceError: Reflection service responded with an
+                error.
             grpc.RpcError: Lower level RPC error.
         """
         loaded = self.reflector.load_protocols(channel, filenames=filenames)
@@ -310,7 +311,8 @@ def resolve_lazy_imports(channel):
         channel (grpc.Channel): The RPC channel to use for reflection service.
 
     Raises:
-        reflector.ServiceError: Reflection service responded with an error.
+        yagrc.reflector.ServiceError: Reflection service responded with an
+            error.
         grpc.RpcError: Lower level RPC error.
     """
     if not _lazy_finder.pb2_imports and not _lazy_finder.pb2_grpc_imports:

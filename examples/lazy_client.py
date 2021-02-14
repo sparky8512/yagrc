@@ -3,9 +3,9 @@
 import logging
 
 import grpc
-from yagrc import importer
+from yagrc import importer as yagrc_importer
 
-importer.add_lazy_packages(["arithmetic"])
+yagrc_importer.add_lazy_packages(["arithmetic"])
 
 from arithmetic import subtract_pb2
 from arithmetic import subtract_pb2_grpc
@@ -13,7 +13,7 @@ from arithmetic import subtract_pb2_grpc
 
 def main():
     with grpc.insecure_channel("localhost:19002") as channel:
-        importer.resolve_lazy_imports(channel)
+        yagrc_importer.resolve_lazy_imports(channel)
 
         stub = subtract_pb2_grpc.SubtractionStub(channel)
         response = stub.SubtractOne(subtract_pb2.Minuend(number=5))

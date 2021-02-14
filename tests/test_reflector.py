@@ -1,36 +1,35 @@
 import pytest
-from yagrc import reflector
+from yagrc import reflector as yagrc_reflector
 
 
 @pytest.fixture(scope="module", params=["load_service", "load_all"])
-def yagrc_reflector(request, grpc_channel):
-    grpc_reflector = reflector.GrpcReflectionClient()
+def grpc_reflector(request, grpc_channel):
+    reflector = yagrc_reflector.GrpcReflectionClient()
     if request.param == "load_service":
-        grpc_reflector.load_protocols(grpc_channel,
-                                      symbols=["Testing.Addition"])
+        reflector.load_protocols(grpc_channel, symbols=["Testing.Addition"])
     else:
-        grpc_reflector.load_protocols(grpc_channel)
-    return grpc_reflector
+        reflector.load_protocols(grpc_channel)
+    return reflector
 
 
 @pytest.fixture
-def stub_class(yagrc_reflector):
-    return yagrc_reflector.service_stub_class("Testing.Addition")
+def stub_class(grpc_reflector):
+    return grpc_reflector.service_stub_class("Testing.Addition")
 
 
 @pytest.fixture
-def addend_class(yagrc_reflector):
-    return yagrc_reflector.message_class("Testing.Addend")
+def addend_class(grpc_reflector):
+    return grpc_reflector.message_class("Testing.Addend")
 
 
 @pytest.fixture
-def query_class(yagrc_reflector):
-    return yagrc_reflector.message_class("Testing.StatusQuery")
+def query_class(grpc_reflector):
+    return grpc_reflector.message_class("Testing.StatusQuery")
 
 
 @pytest.fixture
-def enum_class(yagrc_reflector):
-    return yagrc_reflector.enum_class("Testing.ServiceState")
+def enum_class(grpc_reflector):
+    return grpc_reflector.enum_class("Testing.ServiceState")
 
 
 def test_AddOne(grpc_channel, stub_class, addend_class):
@@ -76,43 +75,43 @@ def test_StatusQuery(grpc_channel, stub_class, query_class, enum_class):
     # no reflector equivalent for AddTypes_pb2._UNKNOWN
 
 
-def test_nested_messsage(yagrc_reflector):
-    nested_class = yagrc_reflector.message_class(
+def test_nested_messsage(grpc_reflector):
+    nested_class = grpc_reflector.message_class(
         "Testing.StatusResponse.State.Wrapper")
     assert nested_class.DESCRIPTOR.full_name == "Testing.StatusResponse.State.Wrapper"
 
 
 def test_list_services(grpc_channel):
-    services = reflector.list_services(grpc_channel)
+    services = yagrc_reflector.list_services(grpc_channel)
     assert "Testing.Addition" in services
 
 
-@pytest.mark.xfail(raises=reflector.ServiceError, strict=True)
+@pytest.mark.xfail(raises=yagrc_reflector.ServiceError, strict=True)
 def test_list_error(grpc_channel, force_list_services_error):
-    grpc_reflector = reflector.GrpcReflectionClient()
-    grpc_reflector.load_protocols(grpc_channel)
+    reflector = yagrc_reflector.GrpcReflectionClient()
+    reflector.load_protocols(grpc_channel)
 
 
 @pytest.mark.xfail(raises=KeyError, strict=True)
 def test_unsatisfied_dep(grpc_channel, force_unsatisfied_dep):
-    grpc_reflector = reflector.GrpcReflectionClient()
-    grpc_reflector.load_protocols(grpc_channel, symbols=["Testing.Addition"])
+    reflector = yagrc_reflector.GrpcReflectionClient()
+    reflector.load_protocols(grpc_channel, symbols=["Testing.Addition"])
 
 
-@pytest.mark.xfail(raises=reflector.ServiceError, strict=True)
+@pytest.mark.xfail(raises=yagrc_reflector.ServiceError, strict=True)
 def test_bad_proto(grpc_channel):
-    grpc_reflector = reflector.GrpcReflectionClient()
-    grpc_reflector.load_protocols(grpc_channel, symbols=["Testing.Subtraction"])
+    reflector = yagrc_reflector.GrpcReflectionClient()
+    reflector.load_protocols(grpc_channel, symbols=["Testing.Subtraction"])
     assert False
 
 
 @pytest.mark.xfail(raises=KeyError, strict=True)
-def test_bad_service(yagrc_reflector):
-    yagrc_reflector.service_stub_class("Testing.Subtraction")
+def test_bad_service(grpc_reflector):
+    grpc_reflector.service_stub_class("Testing.Subtraction")
     assert False
 
 
 @pytest.mark.xfail(raises=KeyError, strict=True)
-def test_bad_message(yagrc_reflector):
-    yagrc_reflector.message_class("Testing.Minuend")
+def test_bad_message(grpc_reflector):
+    grpc_reflector.message_class("Testing.Minuend")
     assert False

@@ -2,7 +2,7 @@ import importlib
 import sys
 
 import pytest
-from yagrc import importer
+from yagrc import importer as yagrc_importer
 
 # See comments in Add_One.proto about terrible naming
 
@@ -11,29 +11,29 @@ from yagrc import importer
 @pytest.fixture
 def lazy_cleaner():
     yield
-    if importer._lazy_finder in sys.meta_path:
-        sys.meta_path.remove(importer._lazy_finder)
-    importer._lazy_finder._package_modules.clear()
-    importer._lazy_finder.pb2_imports.clear()
-    importer._lazy_finder.pb2_grpc_imports.clear()
-    importer._lazy_importer.deconfigure()
+    if yagrc_importer._lazy_finder in sys.meta_path:
+        sys.meta_path.remove(yagrc_importer._lazy_finder)
+    yagrc_importer._lazy_finder._package_modules.clear()
+    yagrc_importer._lazy_finder.pb2_imports.clear()
+    yagrc_importer._lazy_finder.pb2_grpc_imports.clear()
+    yagrc_importer._lazy_importer.deconfigure()
     for name in ("Testing_protos", "Testing_protos.other_pb2"):
         if name in sys.modules:
             del sys.modules[name]
 
 
 def test_AddOne(grpc_channel, lazy_cleaner):
-    importer.add_lazy_packages(["Testing_protos"])
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
     from Testing_protos import Add_One_pb2_grpc
     from Testing_protos import AddTypes_pb2
-    importer.resolve_lazy_imports(grpc_channel)
+    yagrc_importer.resolve_lazy_imports(grpc_channel)
     stub = Add_One_pb2_grpc.AdditionStub(grpc_channel)
     response = stub.AddOne(AddTypes_pb2.Addend(number=5))
     assert response.number == 6
 
 
 def test_unresolved(lazy_cleaner):
-    importer.add_lazy_packages(["Testing_protos"])
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
     from Testing_protos import other_pb2
     try:
         a = other_pb2.random_attribute
@@ -43,20 +43,20 @@ def test_unresolved(lazy_cleaner):
 
 
 def test_unlazy(grpc_channel, lazy_cleaner):
-    importer.add_lazy_packages(["Testing_protos"])
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
     import collections
-    importer.resolve_lazy_imports(grpc_channel)
+    yagrc_importer.resolve_lazy_imports(grpc_channel)
 
 
 @pytest.mark.xfail(raises=ImportError, strict=True)
 def test_bad_import(lazy_cleaner):
-    importer.add_lazy_packages(["Testing_protos"])
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
     from Testing_protos import bad_import
     assert False
 
 
 @pytest.mark.xfail(raises=ImportError, strict=True)
 def test_bad_package(lazy_cleaner):
-    importer.add_lazy_packages(["Testing_protos"])
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
     from bad_package import bad_import
     assert False

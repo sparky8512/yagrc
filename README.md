@@ -33,16 +33,16 @@ with grpc.insecure_channel(target) as channel:
 the equivalent using `yagrc.reflector` would be:
 ```python
 import grpc
-from yagrc import reflector
+from yagrc import reflector as yagrc_reflector
 
 ...
 
-grpc_reflector = reflector.GrpcReflectionClient()
+reflector = yagrc_reflector.GrpcReflectionClient()
 
 with grpc.insecure_channel(target) as channel:
-    grpc_reflector.load_protocols(channel, symbols=["Arithmetic.Subtraction"])
-    stub_class = grpc_reflector.service_stub_class("Arithmetic.Subtraction")
-    request_class = grpc_reflector.message_class("Arithmetic.Minuend")
+    reflector.load_protocols(channel, symbols=["Arithmetic.Subtraction"])
+    stub_class = reflector.service_stub_class("Arithmetic.Subtraction")
+    request_class = reflector.message_class("Arithmetic.Minuend")
 
     stub = stub_class(channel)
     response = stub.SubtractOne(request_class(number=5))
@@ -51,14 +51,14 @@ with grpc.insecure_channel(target) as channel:
 and the equivalent using `yagrc.importer` would be:
 ```python
 import grpc
-from yagrc import importer
+from yagrc import importer as yagrc_importer
 
 ...
 
-grpc_importer = importer.GrpcImporter()
+importer = yagrc_importer.GrpcImporter()
 
 with grpc.insecure_channel(target) as channel:
-    grpc_importer.configure(channel, filenames=["arithmetic/subtract.proto"])
+    importer.configure(channel, filenames=["arithmetic/subtract.proto"])
 
     from arithmetic import subtract_pb2
     from arithmetic import subtract_pb2_grpc
@@ -72,9 +72,9 @@ In both cases, the relevant protocol files must first be loaded, using `GrpcRefl
 There is also a lazy importer in `yagrc.importer`, which is simpler to use but less flexible:
 ```python
 import grpc
-from yagrc import importer
+from yagrc import importer as yagrc_importer
 
-importer.add_lazy_packages(["arithmetic"])
+yagrc_importer.add_lazy_packages(["arithmetic"])
 
 from arithmetic import subtract_pb2
 from arithmetic import subtract_pb2_grpc
@@ -82,7 +82,7 @@ from arithmetic import subtract_pb2_grpc
 ...
 
 with grpc.insecure_channel(target) as channel:
-    importer.resolve_lazy_imports(channel)
+    yagrc_importer.resolve_lazy_imports(channel)
 
     stub = subtract_pb2_grpc.SubtractionStub(channel)
     response = stub.SubtractOne(subtract_pb2.Minuend(number=5))
@@ -101,17 +101,18 @@ try:
     from arithmetic import subtract_pb2_grpc
     import_ok = True
 except ImportError:
-    from yagrc import importer
+    from yagrc import importer as yagrc_importer
     import_ok = False
 
 def import_protocols(channel):
-    grpc_importer = importer.GrpcImporter()
-    grpc_importer.configure(channel, filenames=["arithmetic/subtract.proto"])
+    importer = yagrc_importer.GrpcImporter()
+    importer.configure(channel, filenames=["arithmetic/subtract.proto"])
 
     global subtract_pb2
     global subtract_pb2_grpc
     from arithmetic import subtract_pb2
     from arithmetic import subtract_pb2_grpc
+
     global import_ok
     import_ok = True
 

@@ -18,6 +18,11 @@ from google.protobuf import message_factory
 from grpc_reflection.v1alpha import reflection_pb2
 from grpc_reflection.v1alpha import reflection_pb2_grpc
 
+# This is somewhat arbitrary, and is just here to prevent hang in the case of
+# dead network connection that the client side still believes to be open.
+QUERY_TIMEOUT = 10
+"""Max wait time for reflection query completion, in seconds."""
+
 
 class ServiceError(Exception):
     """Error reported by reflection service."""
@@ -34,8 +39,9 @@ def __stub_init__(self, channel):
 
 
 def _list_services(stub):
-    responses = stub.ServerReflectionInfo(
-        iter([reflection_pb2.ServerReflectionRequest(list_services="")]))
+    responses = stub.ServerReflectionInfo(iter(
+        [reflection_pb2.ServerReflectionRequest(list_services="")]),
+                                          timeout=QUERY_TIMEOUT)
     for response in responses:
         if response.HasField("error_response"):
             raise ServiceError(response.error_response.error_message)
@@ -101,7 +107,8 @@ class GrpcReflectionEngine():
         protos = {}
         traversed = set()
         while requests:
-            responses = stub.ServerReflectionInfo(iter(requests))
+            responses = stub.ServerReflectionInfo(iter(requests),
+                                                  timeout=QUERY_TIMEOUT)
             deps = set()
             for response in responses:
                 if response.HasField("error_response"):

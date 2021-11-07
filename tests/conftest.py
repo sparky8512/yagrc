@@ -8,7 +8,8 @@ import pytest
 # Testing_protos package is deliberately kept out of the import path, but the
 # service still needs it. Can't just use relative imports, because the recursive
 # imports in the generated _pb2 modules also need to be able to find it.
-addone_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "service")
+addone_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "service")
 sys.path.insert(0, addone_path)
 
 # See comments in Add_One.proto about terrible naming
@@ -50,6 +51,35 @@ def grpc_server(_grpc_server, grpc_addr, grpc_add_to_server, grpc_servicer):
     _grpc_server.start()
     yield _grpc_server
     _grpc_server.stop(grace=None)
+
+
+# Override pytest-grpc plugin implementation of grpc_channel to hack around
+# unhandled optional args to handler methods. This is ugly as sin, only
+# patches the one handler type the reflection service uses, and is liable to
+# break with later versions of the plugin, but whatever.... On the plus side,
+# this provides an opportunity to verify that reflection service operations
+# always include a timeout arg.
+@pytest.fixture(scope='module')
+def grpc_channel(grpc_create_channel):
+    with grpc_create_channel() as channel:
+        real_fake_stream_stream = channel.stream_stream
+
+        def wrapped_stream_stream(method_path, *args, **kwargs):
+            real_fake_handler = real_fake_stream_stream(method_path, *args,
+                                                        **kwargs)
+
+            def wrapped_fake_handler(request, timeout=None, **kwargs):
+                if method_path.startswith(
+                        "/grpc.reflection.v1alpha.ServerReflection/"):
+                    assert timeout is not None
+                return real_fake_handler(request)
+
+            return wrapped_fake_handler
+
+        if channel.__class__.__name__ == "FakeChannel":
+            channel.stream_stream = wrapped_stream_stream
+
+        yield channel
 
 
 # Brittle hack of the reflection service to report error

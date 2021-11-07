@@ -321,23 +321,28 @@ def resolve_lazy_imports(channel):
     pb2_modules = tuple(
         (module.__name__[:-4].replace(".", "/") + ".proto", module)
         for module in _lazy_finder.pb2_imports)
-    _lazy_finder.pb2_imports.clear()
 
     pb2_grpc_modules = tuple(
         (module.__name__[:-9].replace(".", "/") + ".proto", module)
         for module in _lazy_finder.pb2_grpc_imports)
-    _lazy_finder.pb2_grpc_imports.clear()
 
+    orig_meta_path = sys.meta_path.copy()
     if _lazy_finder in sys.meta_path:
         sys.meta_path.remove(_lazy_finder)
 
-    filenames = set(x[0] for x in pb2_modules + pb2_grpc_modules)
-    _lazy_importer.configure(channel, filenames=filenames)
-    for filename, module in pb2_modules:
-        del module.__getattr__
-        _exec_pb2_module(module, _lazy_importer.reflector, filename)
-    for filename, module in pb2_grpc_modules:
-        del module.__getattr__
-        _exec_pb2_grpc_module(module, _lazy_importer.reflector, filename)
+    try:
+        filenames = set(x[0] for x in pb2_modules + pb2_grpc_modules)
+        _lazy_importer.configure(channel, filenames=filenames)
+        for filename, module in pb2_modules:
+            del module.__getattr__
+            _exec_pb2_module(module, _lazy_importer.reflector, filename)
+        for filename, module in pb2_grpc_modules:
+            del module.__getattr__
+            _exec_pb2_grpc_module(module, _lazy_importer.reflector, filename)
+    except:
+        sys.meta_path = orig_meta_path
+        raise
 
+    _lazy_finder.pb2_imports.clear()
+    _lazy_finder.pb2_grpc_imports.clear()
     sys.meta_path.append(_lazy_finder)

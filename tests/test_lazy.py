@@ -17,7 +17,9 @@ def lazy_cleaner():
     yagrc_importer._lazy_finder.pb2_imports.clear()
     yagrc_importer._lazy_finder.pb2_grpc_imports.clear()
     yagrc_importer._lazy_importer.deconfigure()
-    for name in ("Testing_protos", "Testing_protos.other_pb2"):
+    for name in ("Testing_protos", "Testing_protos.other_pb2",
+                 "Testing_protos.Add_One_pb2_grpc",
+                 "Testing_protos.AddTypes_pb2"):
         if name in sys.modules:
             del sys.modules[name]
 
@@ -60,3 +62,29 @@ def test_bad_package(lazy_cleaner):
     yagrc_importer.add_lazy_packages(["Testing_protos"])
     from bad_package import bad_import
     assert False
+
+
+def test_resolve_fail(grpc_channel, lazy_cleaner):
+    yagrc_importer.add_lazy_packages(["Testing_protos"])
+    from Testing_protos import AddTypes_pb2
+
+    try:
+        yagrc_importer.resolve_lazy_imports(None)
+        assert False
+    except AttributeError:
+        pass
+
+    # Test failure again to verify first failure did not lose state.
+    try:
+        yagrc_importer.resolve_lazy_imports(None)
+        assert False
+    except AttributeError:
+        pass
+
+    # Finally, test success case to make sure prior failures did not break
+    # things permanently, including the ability to do more lazy imports.
+    from Testing_protos import Add_One_pb2_grpc
+    yagrc_importer.resolve_lazy_imports(grpc_channel)
+    stub = Add_One_pb2_grpc.AdditionStub(grpc_channel)
+    response = stub.AddOne(AddTypes_pb2.Addend(number=5))
+    assert response.number == 6

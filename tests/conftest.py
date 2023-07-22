@@ -102,11 +102,9 @@ def force_unsatisfied_dep(monkeypatch):
     real_method = reflection.BaseReflectionServicer._file_by_filename
 
     def mock_file_by_filename(self, filename):
-        # it'd be awkward to just remove the response given how the service is
-        # written, so just return a duplicate copy of AddTypes.proto
-        if filename == "Testing_protos/AddAltTypes.proto":
-            return real_method(self, "Testing_protos/AddTypes.proto")
-        return real_method(self, filename)
+        response = real_method(self, filename)
+        del response.file_descriptor_response.file_descriptor_proto[-1]
+        return response
 
     monkeypatch.setattr(reflection.BaseReflectionServicer, "_file_by_filename",
                         mock_file_by_filename)

@@ -95,7 +95,8 @@ def test_list_error(grpc_channel, force_list_services_error):
 @pytest.mark.xfail(raises=KeyError, strict=True)
 def test_unsatisfied_dep(grpc_channel, force_unsatisfied_dep):
     reflector = yagrc_reflector.GrpcReflectionClient()
-    reflector.load_protocols(grpc_channel, symbols=["Testing.Addition"])
+    reflector.load_protocols(grpc_channel, filenames=["Testing_protos/Add_One.proto"])
+    assert False
 
 
 @pytest.mark.xfail(raises=yagrc_reflector.ServiceError, strict=True)

@@ -3,9 +3,9 @@
 # source: Testing_protos/Add_One.proto
 """Generated protocol buffer code."""
 from google.protobuf import descriptor as _descriptor
-from google.protobuf import message as _message
-from google.protobuf import reflection as _reflection
+from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import symbol_database as _symbol_database
+from google.protobuf.internal import builder as _builder
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
@@ -18,85 +18,14 @@ except AttributeError:
   Testing__protos_dot_AddAltTypes__pb2 = Testing__protos_dot_AddTypes__pb2.Testing_protos.AddAltTypes_pb2
 
 
-DESCRIPTOR = _descriptor.FileDescriptor(
-  name='Testing_protos/Add_One.proto',
-  package='Testing',
-  syntax='proto3',
-  serialized_options=None,
-  create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x1cTesting_protos/Add_One.proto\x12\x07Testing\x1a\x1dTesting_protos/AddTypes.proto2\xf3\x01\n\x08\x41\x64\x64ition\x12\'\n\x06\x41\x64\x64One\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum\x12*\n\x07\x41\x64\x64Ones\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum0\x01\x12*\n\x07\x41\x64\x64sOne\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum(\x01\x12-\n\x08\x41\x64\x64sOnes\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum(\x01\x30\x01\x12\x37\n\x06Status\x12\x14.Testing.StatusQuery\x1a\x17.Testing.StatusResponseb\x06proto3'
-  ,
-  dependencies=[Testing__protos_dot_AddTypes__pb2.DESCRIPTOR,])
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1cTesting_protos/Add_One.proto\x12\x07Testing\x1a\x1dTesting_protos/AddTypes.proto2\xf3\x01\n\x08\x41\x64\x64ition\x12\'\n\x06\x41\x64\x64One\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum\x12*\n\x07\x41\x64\x64Ones\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum0\x01\x12*\n\x07\x41\x64\x64sOne\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum(\x01\x12-\n\x08\x41\x64\x64sOnes\x12\x0f.Testing.Addend\x1a\x0c.Testing.Sum(\x01\x30\x01\x12\x37\n\x06Status\x12\x14.Testing.StatusQuery\x1a\x17.Testing.StatusResponseb\x06proto3')
 
+_globals = globals()
+_builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'Testing_protos.Add_One_pb2', _globals)
+if _descriptor._USE_C_DESCRIPTORS == False:
 
-
-_sym_db.RegisterFileDescriptor(DESCRIPTOR)
-
-
-
-_ADDITION = _descriptor.ServiceDescriptor(
-  name='Addition',
-  full_name='Testing.Addition',
-  file=DESCRIPTOR,
-  index=0,
-  serialized_options=None,
-  create_key=_descriptor._internal_create_key,
-  serialized_start=73,
-  serialized_end=316,
-  methods=[
-  _descriptor.MethodDescriptor(
-    name='AddOne',
-    full_name='Testing.Addition.AddOne',
-    index=0,
-    containing_service=None,
-    input_type=Testing__protos_dot_AddAltTypes__pb2._ADDEND,
-    output_type=Testing__protos_dot_AddAltTypes__pb2._SUM,
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-  ),
-  _descriptor.MethodDescriptor(
-    name='AddOnes',
-    full_name='Testing.Addition.AddOnes',
-    index=1,
-    containing_service=None,
-    input_type=Testing__protos_dot_AddAltTypes__pb2._ADDEND,
-    output_type=Testing__protos_dot_AddAltTypes__pb2._SUM,
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-  ),
-  _descriptor.MethodDescriptor(
-    name='AddsOne',
-    full_name='Testing.Addition.AddsOne',
-    index=2,
-    containing_service=None,
-    input_type=Testing__protos_dot_AddAltTypes__pb2._ADDEND,
-    output_type=Testing__protos_dot_AddAltTypes__pb2._SUM,
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-  ),
-  _descriptor.MethodDescriptor(
-    name='AddsOnes',
-    full_name='Testing.Addition.AddsOnes',
-    index=3,
-    containing_service=None,
-    input_type=Testing__protos_dot_AddAltTypes__pb2._ADDEND,
-    output_type=Testing__protos_dot_AddAltTypes__pb2._SUM,
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-  ),
-  _descriptor.MethodDescriptor(
-    name='Status',
-    full_name='Testing.Addition.Status',
-    index=4,
-    containing_service=None,
-    input_type=Testing__protos_dot_AddTypes__pb2._STATUSQUERY,
-    output_type=Testing__protos_dot_AddTypes__pb2._STATUSRESPONSE,
-    serialized_options=None,
-    create_key=_descriptor._internal_create_key,
-  ),
-])
-_sym_db.RegisterServiceDescriptor(_ADDITION)
-
-DESCRIPTOR.services_by_name['Addition'] = _ADDITION
-
+  DESCRIPTOR._options = None
+  _globals['_ADDITION']._serialized_start=73
+  _globals['_ADDITION']._serialized_end=316
 # @@protoc_insertion_point(module_scope)

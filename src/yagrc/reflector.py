@@ -82,7 +82,6 @@ class GrpcReflectionEngine():
     def __init__(self):
         self.methods_by_file = {}
         self.pool = descriptor_pool.DescriptorPool()
-        self._factory = message_factory.MessageFactory(self.pool)
 
     def load_protocols(self, channel, filenames=None, symbols=None):
         """Implementation of `GrpcReflectionClient.load_protocols`"""
@@ -169,7 +168,7 @@ class GrpcReflectionEngine():
         Args:
             proto (google.protobuf.descriptor.Descriptor): Message descriptor.
         """
-        return self._factory.GetPrototype(proto)
+        return message_factory.GetMessageClass(proto)
 
     def gen_stub_class(self, service, method_protos):
         """Get service stub class from service descriptor.

@@ -7,7 +7,8 @@ from yagrc import reflector
 def dump_protocols(channel, filenames=None, symbols=None):
     """Get serialized FileDescriptorSet message via reflection.
 
-    See `yagrc.reflector.GrpcReflectionClient.load_protocols` for arg details.
+    See `yagrc.reflector.GrpcReflectionClient.load_protocols` for arg and
+    exception details.
     """
     fdset = descriptor_pb2.FileDescriptorSet()
     grpc_reflector = reflector.GrpcReflectionEngine()

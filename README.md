@@ -90,7 +90,7 @@ with grpc.insecure_channel(target) as channel:
 
 ### Practical use of the importer module
 
-The primary motivation for `yagrc.importer` is to provide a drop-in replacement of the protoc-generated modules without having to rewrite the client code to access the classes differently. However, a grpc `channel` is needed to in order to load the protocol files, and that's usually not something you'll want to be opening at the top level of a module, so unless you use the lazy variant, the imports will probably need to be deferred to a function call. You can do this just prior to using the grpc calls, as in the example above, but doing so would result in a lot of unnecessary work every time each function that uses grpc is called.
+The primary motivation for `yagrc.importer` is to provide a drop-in replacement of the protoc-generated modules without having to rewrite the client code to access the classes differently. However, a grpc `channel` is needed in order to load the protocol files, and that's usually not something you'll want to be opening at the top level of a module, so unless you use the lazy variant, the imports will probably need to be deferred to a function call. You can do this just prior to using the grpc calls, as in the example above, but doing so would result in a lot of unnecessary work every time each function that uses grpc is called.
 
 An alternative is to load them in one place along with the deferred imports and keep track of whether or not it needs to be run:
 ```python
@@ -125,6 +125,8 @@ def some_function_that_uses_grpc():
         stub = subtract_pb2_grpc.SubtractionStub(channel)
         response = stub.SubtractOne(subtract_pb2.Minuend(number=5))
 ```
+Note the usage of the `global` statements in `import_protocols()`, without which, the imports would only be valid within that function context.
+
 With this pattern, if the protoc-generated files are available in the module import path, they will be used. If not, they will be loaded when needed via reflection.
 
 Note that `GrpcImporter.configure` is not especially tread safe, so calling it in multiple threads simultaneously should be avoided. If there is a possibility that multiple threads may run grpc calls simultaneously, it would probably be better to just ensure `GrpcImporter.configure` is called in a main thread prior to starting the other threads.

@@ -129,7 +129,7 @@ Note the usage of the `global` statements in `import_protocols()`, without which
 
 With this pattern, if the protoc-generated files are available in the module import path, they will be used. If not, they will be loaded when needed via reflection.
 
-Note that `GrpcImporter.configure` is not especially tread safe, so calling it in multiple threads simultaneously should be avoided. If there is a possibility that multiple threads may run grpc calls simultaneously, it would probably be better to just ensure `GrpcImporter.configure` is called in a main thread prior to starting the other threads.
+Note that `GrpcImporter.configure` is not especially thread safe, so calling it in multiple threads simultaneously should be avoided. If there is a possibility that multiple threads may run grpc calls simultaneously, it would probably be better to just ensure `GrpcImporter.configure` is called in a main thread prior to starting the other threads.
 
 This is somewhat messy. The lazy import mechanism attempts to cut back on the mess by allowing the imports to happen in advance, outside of function context. The lazy importer example in the prior section will still prefer the protoc-generated files if they are available in the module import path. `importer.resolve_lazy_imports` is safe to call multiple times even if no more imports need to be resolved, it just won't do anything in that case.
 

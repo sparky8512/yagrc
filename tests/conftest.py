@@ -1,6 +1,7 @@
 import os.path
 import sys
 
+import grpc
 from grpc_reflection.v1alpha import reflection as reflection_v1a
 from grpc_reflection.v1alpha import reflection_pb2 as reflection_pb2_v1a
 try:
@@ -52,6 +53,13 @@ def server_modes():
     return True, True
 
 
+# Override pytest-grpc plugin implementation to prevent reusing _grpc_server
+# instances across different server mode configurations
+@pytest.fixture(scope='module')
+def grpc_interceptors(server_modes):
+    return
+
+
 # Override pytest-grpc plugin implementation to enable reflection
 @pytest.fixture(scope='module')
 def grpc_server(_grpc_server, grpc_addr, grpc_add_to_server, grpc_servicer,
@@ -72,6 +80,13 @@ def grpc_server(_grpc_server, grpc_addr, grpc_add_to_server, grpc_servicer,
     _grpc_server.stop(grace=None)
 
 
+# Simulate the exception client would get for unimplemented service or method
+class FakeUnimplementedError(grpc.RpcError, grpc.Call):
+
+    def code(self):
+        return grpc.StatusCode.UNIMPLEMENTED
+
+
 # Override pytest-grpc plugin implementation of grpc_channel to hack around
 # unhandled optional args to handler methods. This is ugly as sin, only
 # patches the one handler type the reflection service uses, and is liable to
@@ -84,8 +99,11 @@ def grpc_channel(grpc_create_channel):
         real_fake_stream_stream = channel.stream_stream
 
         def wrapped_stream_stream(method_path, *args, **kwargs):
-            real_fake_handler = real_fake_stream_stream(method_path, *args,
-                                                        **kwargs)
+            try:
+                real_fake_handler = real_fake_stream_stream(
+                    method_path, *args, **kwargs)
+            except KeyError as err:
+                raise FakeUnimplementedError() from err
 
             def wrapped_fake_handler(request, timeout=None, **kwargs):
                 if method_path.startswith(

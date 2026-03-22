@@ -5,6 +5,8 @@ This is not meant to be useful. See the clients in the examples directory for
 slightly more useful grpc client code.
 """
 
+import logging
+
 import grpc
 
 # See comments in Add_One.proto about terrible naming

@@ -15,8 +15,15 @@ from google.protobuf import descriptor_pb2
 from google.protobuf import descriptor_pool
 from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import message_factory
-from grpc_reflection.v1alpha import reflection_pb2
-from grpc_reflection.v1alpha import reflection_pb2_grpc
+import grpc
+from grpc_reflection.v1alpha import reflection_pb2 as reflection_pb2_v1a
+from grpc_reflection.v1alpha import reflection_pb2_grpc as reflection_pb2_grpc_v1a
+try:
+    from grpc_reflection.v1 import reflection_pb2 as reflection_pb2_v1
+    from grpc_reflection.v1 import reflection_pb2_grpc as reflection_pb2_grpc_v1
+except ModuleNotFoundError:
+    from yagrc.grpc_reflection.v1 import reflection_pb2 as reflection_pb2_v1
+    from yagrc.grpc_reflection.v1 import reflection_pb2_grpc as reflection_pb2_grpc_v1
 
 # This is somewhat arbitrary, and is just here to prevent hang in the case of
 # dead network connection that the client side still believes to be open.
@@ -38,7 +45,7 @@ def __stub_init__(self, channel):
                                    response_deserializer=in_serializer))
 
 
-def _list_services(stub):
+def _list_services(stub, reflection_pb2):
     responses = stub.ServerReflectionInfo(iter(
         [reflection_pb2.ServerReflectionRequest(list_services="")]),
                                           timeout=QUERY_TIMEOUT)
@@ -59,8 +66,19 @@ def list_services(channel):
         ServiceError: Reflection service responded with an error.
         grpc.RpcError: Lower level RPC error.
     """
-    stub = reflection_pb2_grpc.ServerReflectionStub(channel)
-    return list(_list_services(stub))
+    try:
+        stub = reflection_pb2_grpc_v1.ServerReflectionStub(channel)
+        return list(_list_services(stub, reflection_pb2_v1))
+    except grpc.RpcError as err:
+        # Should be instance of grpc.Call. If not, something has changed in
+        # grpc implementation and cannot tell reason for error. In that case,
+        # go ahead and try v1alpha version in case due to v1 not supported.
+        # Otherwise, fail here so correct error propagates.
+        if isinstance(
+                err, grpc.Call) and err.code() != grpc.StatusCode.UNIMPLEMENTED:
+            raise
+        stub = reflection_pb2_grpc_v1a.ServerReflectionStub(channel)
+        return list(_list_services(stub, reflection_pb2_v1a))
 
 
 def enum_from_descr(proto):
@@ -85,50 +103,65 @@ class GrpcReflectionEngine():
 
     def load_protocols(self, channel, filenames=None, symbols=None):
         """Implementation of `GrpcReflectionClient.load_protocols`"""
-        stub = reflection_pb2_grpc.ServerReflectionStub(channel)
 
-        requests = []
-        if filenames:
-            requests.extend(
-                reflection_pb2.ServerReflectionRequest(file_by_filename=name)
-                for name in filenames)
-        if symbols:
-            requests.extend(
-                reflection_pb2.ServerReflectionRequest(
-                    file_containing_symbol=symbol) for symbol in symbols)
-        if not requests:
-            requests.extend(
-                reflection_pb2.ServerReflectionRequest(
-                    file_containing_symbol=name)
-                for name in _list_services(stub)
-                if name != "grpc.reflection.v1alpha.ServerReflection")
+        def reflect(reflection_pb2, reflection_pb2_grpc):
+            stub = reflection_pb2_grpc.ServerReflectionStub(channel)
 
-        protos = {}
-        traversed = set()
-        while requests:
-            responses = stub.ServerReflectionInfo(iter(requests),
-                                                  timeout=QUERY_TIMEOUT)
-            deps = set()
-            for response in responses:
-                if response.HasField("error_response"):
-                    raise ServiceError(response.error_response.error_message)
-                for desc_bytes in response.file_descriptor_response.file_descriptor_proto:
-                    proto = descriptor_pb2.FileDescriptorProto.FromString(  # pylint: disable=no-member
-                        desc_bytes)
-                    traversed.add(proto.name)
-                    deps.update(proto.dependency)
-                    protos[proto.name] = proto
-                    self.methods_by_file[proto.name] = {
-                        service.name: service.method
-                        for service in proto.service
-                    }
-            deps -= traversed
-            requests = [
-                reflection_pb2.ServerReflectionRequest(file_by_filename=dep)
-                for dep in deps
-            ]
-            # prevent unsatisfied deps from looping forever
-            traversed.update(deps)
+            requests = []
+            if filenames:
+                requests.extend(
+                    reflection_pb2.ServerReflectionRequest(
+                        file_by_filename=name) for name in filenames)
+            if symbols:
+                requests.extend(
+                    reflection_pb2.ServerReflectionRequest(
+                        file_containing_symbol=symbol) for symbol in symbols)
+            if not requests:
+                requests.extend(
+                    reflection_pb2.ServerReflectionRequest(
+                        file_containing_symbol=name)
+                    for name in _list_services(stub, reflection_pb2)
+                    if name != "grpc.reflection.v1alpha.ServerReflection")
+
+            protos = {}
+            traversed = set()
+            while requests:
+                responses = stub.ServerReflectionInfo(iter(requests),
+                                                      timeout=QUERY_TIMEOUT)
+                deps = set()
+                for response in responses:
+                    if response.HasField("error_response"):
+                        raise ServiceError(
+                            response.error_response.error_message)
+                    for desc_bytes in response.file_descriptor_response.file_descriptor_proto:
+                        proto = descriptor_pb2.FileDescriptorProto.FromString(  # pylint: disable=no-member
+                            desc_bytes)
+                        traversed.add(proto.name)
+                        deps.update(proto.dependency)
+                        protos[proto.name] = proto
+                        self.methods_by_file[proto.name] = {
+                            service.name: service.method
+                            for service in proto.service
+                        }
+                deps -= traversed
+                requests = [
+                    reflection_pb2.ServerReflectionRequest(file_by_filename=dep)
+                    for dep in deps
+                ]
+                # prevent unsatisfied deps from looping forever
+                traversed.update(deps)
+
+            return protos
+
+        try:
+            protos = reflect(reflection_pb2_v1, reflection_pb2_grpc_v1)
+        except grpc.RpcError as err:
+            # See comment above about isinstance check.
+            if isinstance(
+                    err,
+                    grpc.Call) and err.code() != grpc.StatusCode.UNIMPLEMENTED:
+                raise
+            protos = reflect(reflection_pb2_v1a, reflection_pb2_grpc_v1a)
 
         names = deque(protos.keys())
         traversed = set()

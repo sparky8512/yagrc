@@ -1,8 +1,15 @@
 import os.path
 import sys
 
-from grpc_reflection.v1alpha import reflection
-from grpc_reflection.v1alpha import reflection_pb2
+from grpc_reflection.v1alpha import reflection as reflection_v1a
+from grpc_reflection.v1alpha import reflection_pb2 as reflection_pb2_v1a
+try:
+    from grpc_reflection.v1 import reflection as reflection_v1
+    from grpc_reflection.v1 import reflection_pb2 as reflection_pb2_v1
+except ModuleNotFoundError:
+    # v1 not available in grpcio-reflection package yet, so use local copies
+    from service.grpc_reflection_v1 import reflection as reflection_v1
+    from yagrc.grpc_reflection.v1 import reflection_pb2 as reflection_pb2_v1
 import pytest
 
 # Testing_protos package is deliberately kept out of the import path, but the
@@ -38,15 +45,27 @@ def grpc_servicer():
 # grpc_stub_cls fixture not defined because stub creation is part of test
 
 
+# Override this fixture in test module to test different combinations
+@pytest.fixture(scope='module')
+def server_modes():
+    # enable v1alpha service, enable v1 service
+    return True, True
+
+
 # Override pytest-grpc plugin implementation to enable reflection
 @pytest.fixture(scope='module')
-def grpc_server(_grpc_server, grpc_addr, grpc_add_to_server, grpc_servicer):
+def grpc_server(_grpc_server, grpc_addr, grpc_add_to_server, grpc_servicer,
+                server_modes):
     grpc_add_to_server(grpc_servicer, _grpc_server)
-    service_names = (
-        _Add_One_DESCRIPTOR.services_by_name['Addition'].full_name,
-        reflection.SERVICE_NAME,
-    )
-    reflection.enable_server_reflection(service_names, _grpc_server)
+    service_names = [_Add_One_DESCRIPTOR.services_by_name['Addition'].full_name]
+    if server_modes[0]:
+        service_names.append(reflection_v1a.SERVICE_NAME)
+    if server_modes[1]:
+        service_names.append(reflection_v1.SERVICE_NAME)
+    if server_modes[0]:
+        reflection_v1a.enable_server_reflection(service_names, _grpc_server)
+    if server_modes[1]:
+        reflection_v1.enable_server_reflection(service_names, _grpc_server)
     _grpc_server.add_insecure_port(grpc_addr)
     _grpc_server.start()
     yield _grpc_server
@@ -70,7 +89,9 @@ def grpc_channel(grpc_create_channel):
 
             def wrapped_fake_handler(request, timeout=None, **kwargs):
                 if method_path.startswith(
-                        "/grpc.reflection.v1alpha.ServerReflection/"):
+                        "/grpc.reflection.v1alpha.ServerReflection/"
+                ) or method_path.startswith(
+                        "/grpc.reflection.v1.ServerReflection/"):
                     assert timeout is not None
                 return real_fake_handler(request)
 
@@ -86,25 +107,35 @@ def grpc_channel(grpc_create_channel):
 @pytest.fixture
 def force_list_services_error(monkeypatch):
 
-    def mock_error(self):
-        response = reflection_pb2.ServerReflectionResponse()
-        response.error_response.error_code = 1
-        response.error_response.error_message = "fake error"
-        return response
+    def patch_service(reflection, reflection_pb2):
 
-    monkeypatch.setattr(reflection.BaseReflectionServicer, "_list_services",
-                        mock_error)
+        def mock_error(self):
+            response = reflection_pb2.ServerReflectionResponse()
+            response.error_response.error_code = 1
+            response.error_response.error_message = "fake error"
+            return response
+
+        monkeypatch.setattr(reflection.BaseReflectionServicer, "_list_services",
+                            mock_error)
+
+    patch_service(reflection_v1a, reflection_pb2_v1a)
+    patch_service(reflection_v1, reflection_pb2_v1)
 
 
 # And another to simulate an unsatisfied dependency
 @pytest.fixture
 def force_unsatisfied_dep(monkeypatch):
-    real_method = reflection.BaseReflectionServicer._file_by_filename
 
-    def mock_file_by_filename(self, filename):
-        response = real_method(self, filename)
-        del response.file_descriptor_response.file_descriptor_proto[-1]
-        return response
+    def patch_service(reflection):
+        real_method = reflection.BaseReflectionServicer._file_by_filename
 
-    monkeypatch.setattr(reflection.BaseReflectionServicer, "_file_by_filename",
-                        mock_file_by_filename)
+        def mock_file_by_filename(self, filename):
+            response = real_method(self, filename)
+            del response.file_descriptor_response.file_descriptor_proto[-1]
+            return response
+
+        monkeypatch.setattr(reflection.BaseReflectionServicer,
+                            "_file_by_filename", mock_file_by_filename)
+
+    patch_service(reflection_v1a)
+    patch_service(reflection_v1)

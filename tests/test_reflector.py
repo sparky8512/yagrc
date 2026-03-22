@@ -2,6 +2,13 @@ import pytest
 from yagrc import reflector as yagrc_reflector
 
 
+# Override in order to test different combinations of service version
+@pytest.fixture(scope="module",
+                params=[(False, True), (True, False), (True, True)])
+def server_modes(request):
+    return request.param
+
+
 @pytest.fixture(scope="module", params=["load_service", "load_all"])
 def grpc_reflector(request, grpc_channel):
     reflector = yagrc_reflector.GrpcReflectionClient()

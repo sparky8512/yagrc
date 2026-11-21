@@ -11,6 +11,7 @@ jobs:
     - uses: actions/checkout@v7
       with:
         persist-credentials: false
+        fetch-depth: 0  # needed for sutuptools-scm
     - name: Set up Python
       uses: actions/setup-python@v7
       with:

@@ -7,6 +7,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+local_scheme = "no-local-version-strict"
 
 [tool.pytest.ini_options]
 #addopts = "--grpc-fake-server --cov=yagrc --cov-report term-missing"

@@ -121,7 +121,8 @@ class GrpcReflectionEngine():
                     reflection_pb2.ServerReflectionRequest(
                         file_containing_symbol=name)
                     for name in _list_services(stub, reflection_pb2)
-                    if name != "grpc.reflection.v1alpha.ServerReflection")
+                    if name not in ("grpc.reflection.v1alpha.ServerReflection",
+                                    "grpc.reflection.v1.ServerReflection"))
 
             protos = {}
             traversed = set()
